@@ -1,0 +1,40 @@
+-- CreateTable
+CREATE TABLE "User" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "token" TEXT NOT NULL,
+    "username" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CreateTable
+CREATE TABLE "RoomsforUsers" (
+    "roomId" INTEGER NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "assignedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "assignedBy" TEXT NOT NULL,
+
+    PRIMARY KEY ("roomId", "userId"),
+    CONSTRAINT "RoomsforUsers_roomId_fkey" FOREIGN KEY ("roomId") REFERENCES "Room" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "RoomsforUsers_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "Room" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "title" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'disabled',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CreateTable
+CREATE TABLE "Stuff" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "name" TEXT NOT NULL,
+    "amount" INTEGER NOT NULL DEFAULT 1,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "roomId" INTEGER NOT NULL,
+    CONSTRAINT "Stuff_roomId_fkey" FOREIGN KEY ("roomId") REFERENCES "Room" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_token_key" ON "User"("token");

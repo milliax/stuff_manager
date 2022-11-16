@@ -1,7 +1,8 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faMinus, faPencil, faPlus } from "@fortawesome/free-solid-svg-icons"
 import { useRouter } from "next/router"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import {Swal} from "sweetalert2"
 
 export default function AvailableStuff({ props }) {
     const [stuff, setStuff] = useState({
@@ -20,9 +21,14 @@ export default function AvailableStuff({ props }) {
         })
     }
 
-    const editProductName = (index) => {
-
+    const editProductName = async (index) => {
+ 
     }
+
+    useEffect(()=>{
+        //TODO: fetch the latest stuff list
+
+    },[])
 
     if (props.exist) {
         return (
@@ -84,6 +90,7 @@ export async function getServerSideProps(context) {
         1. add a permanent token that can change single room
         2. add account system
      */
+    // TODO: No websocket support yet
     const token = context.params.number
     return {
         props: {

@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+
+model User{
+    // Set Prisma decorators:
+    // - @id (because it's an id)
+    // - @default(autoincrement()) (default value is auto-increment)
+    id Int @id @default(autoincrement())
+    
+    // we use unique token to edit room stuff
+    token String @unique
+
+    // describe about the user
+    username String
+
+    // created time
+    createdAt DateTime @default(now())
+
+    // set a rooms variable
+    // with a Tweet[] type (one to many relationship)
+    rooms RoomsforUsers[]
+}
+
+model RoomsforUsers{
+    roomId Int
+    room Room @relation(fields: [roomId],references: [id])
+    userId Int
+    user User @relation(fields: [userId],references: [id])
+    assignedAt DateTime @default(now())
+    assignedBy String
+
+    @@id([roomId,userId])
+}
+
+model Room{
+    id Int @id @default(autoincrement())
+    title String
+    status String @default("disabled")
+    user RoomsforUsers[]
+    stuff Stuff[]
+    createdAt DateTime @default(now())
+}
+
+model Stuff{
+    id Int @id @default(autoincrement())
+    name String
+    amount Int @default(1)
+    createdAt DateTime @default(now())
+    roomId Int
+    room Room @relation(fields: [roomId],references: [id])
+}
