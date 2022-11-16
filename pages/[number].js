@@ -71,24 +71,28 @@ export default function AvailableStuff({ props }) {
             "八寶粥": 8,
             "好吃的飯": 1
         })
-        // setTimeout(() => {
-        //     setLoading(false)
-        // }, 1000)
+        setTimeout(() => {
+            setLoading(false)
+        }, 3000)
     }, [])
 
     if (props.exist) {
         return (
             <div className="h-screen bg-neutral-50">
-                <div className="text-center pt-3 text-3xl">{props.token}</div>
+                <div className="text-center pt-3 text-3xl">{props.title}</div>
                 <div className="text-right pr-2">Powered by Milliax</div>
 
                 <div className="pt-5 flex flex-row justify-center">
                     <div className="w-1/2 flex flex-col space-y-3">
                         {loading ?
-                            Object.keys(Array(3)).map((item, cnt) => (
-                                <div className="bg-blue-100 rounded-full px-5 py-2 grid grid-cols-5 gap-3 animate-pulse" key={cnt}>
-                                    <div className="h-2 bg-slate-200 col-span-3"/>
-                                    <div className="h-2 bg-slate-200 col-span-2"/>
+                            Object.keys([1, 2, 3, 4, 5]).map((item, cnt) => (
+                                <div className="bg-blue-100 rounded-full px-5 py-4 grid grid-cols-5 gap-3" key={cnt}>
+                                    <div className="col-span-3">
+                                        <div className="h-2 bg-slate-400 rounded w-full animate-pulse" > </div>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <div className="h-2 bg-slate-400 rounded w-full animate-pulse" > </div>
+                                    </div>
                                 </div>
                             ))
                             :
@@ -152,6 +156,7 @@ export async function getServerSideProps(context) {
         props: {
             props: {
                 token,
+                title: "12 舍 619",
                 exist: true
             }
         },
