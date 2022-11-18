@@ -44,6 +44,7 @@ model RoomsforUsers{
 
 model Room{
     id Int @id @default(autoincrement())
+    roomNumber String
     title String
     status String @default("disabled")
     user RoomsforUsers[]
