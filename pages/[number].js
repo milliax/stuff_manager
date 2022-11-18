@@ -3,35 +3,50 @@ import { faMinus, faPencil, faPlus } from "@fortawesome/free-solid-svg-icons"
 import { useRouter } from "next/router"
 import { useEffect, useState } from "react"
 import Swal from "sweetalert2"
+import Link from "next/link"
 
 export default function AvailableStuff({ props }) {
     const [loading, setLoading] = useState(true)
     const [stuff, setStuff] = useState({})
     const router = useRouter()
 
-    const toggleAmountChange = (index, delta) => {
+    const toggleAmountChange = async (index, delta) => {
         // console.log(parseInt(stuff[index]) + delta)
-        const newNumber = parseInt(stuff[index]) + delta
-
+        console.log(index)
+        const newNumber = parseInt(stuff[index].amount) + delta
+        console.log(newNumber)
         if (newNumber === 0) {
             Swal.fire({
-                title: `${index}吃/用完了嗎 ?`,
+                title: `${stuff[index].name}吃/用完了嗎 ?`,
                 icon: "question"
             }).then(result => {
-                if (result.isConfirmed) {
-                    // TODO: delete item
+                if (!result.isConfirmed) {
+                    return;
                 }
             })
         } else {
-            setStuff({
-                ...stuff,
-                [index]: newNumber
-            })
+            try {
+                const res = await fetch(`/api/update`, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        mode: "amount",
+                        roomNumber: props.roomNumber,
+                        id: stuff[index].id,
+                        amount: newNumber,
+                        token: props.token,
+                    })
+                })
+            } catch (err) {
+                console.log(`Error: ${err}`)
+            }
+            setTimeout(() => (
+                updateStuff()
+            ), 100)
         }
     }
 
     const editProductName = async (index) => {
-        result = await Swal.fire({
+        const result = await Swal.fire({
             title: "輸入要修改成的名稱",
             text: `原本名稱：${index}`,
             inputAttributes: {
@@ -39,17 +54,23 @@ export default function AvailableStuff({ props }) {
             },
             showLoaderOnConfirm: true,
             preConfirm: (newName) => {
-                return fetch(`/api/delete`, {
+                return fetch(`/api/update`, {
                     method: 'POST',
                     body: JSON.stringify({
-                        room: <props className="roomNumber"></props>,
-                        item: index
+                        mode: "name",
+                        roomNumber: props.roomNumber,
+                        item: index,
+                        name: newName
                     })
                 }).then(response => {
                     if (!response.ok) {
                         throw new Error(response.statusText)
                     }
                     return response.json()
+                }).then(() => {
+                    setTimeout(() => {
+                        updateStuff()
+                    }, 100)
                 }).catch(error => {
                     Swal.showValidatationMessage(`Request failed: ${error}`)
                 })
@@ -65,6 +86,21 @@ export default function AvailableStuff({ props }) {
         }
     }
 
+    const updateStuff = async () => {
+        try {
+            const res = await fetch(`/api/query?roomNumber=${props.roomNumber}&token=${props.token}`)
+            //console.log("Hello")
+            //console.log(res)
+            const response = await res.json()
+            //console.log(response)
+            setStuff(response)
+            console.log(response)
+        } catch (err) {
+            console.log(`Error: ${err}`)
+        }
+        setLoading(false)
+    }
+
     useEffect(() => {
         if (!props.editable && props.status === "private") {
             Swal.fire({
@@ -75,13 +111,7 @@ export default function AvailableStuff({ props }) {
             })
         } else {
             //TODO: fetch the latest stuff list
-            setStuff({
-                "八寶粥": 8,
-                "好吃的飯": 1
-            })
-            setTimeout(() => {
-                setLoading(false)
-            }, 1000)
+            updateStuff()
         }
     }, [])
 
@@ -106,12 +136,12 @@ export default function AvailableStuff({ props }) {
                                 </div>
                             ))
                             :
-                            Object.keys(stuff).map(index => (
-                                <div className="bg-blue-100 rounded-full px-5 py-2 flex flex-row justify-between" key={index}>
+                            stuff.map((thing, cnt) => (
+                                <div className="bg-blue-100 rounded-full px-5 py-2 flex flex-row justify-between" key={thing.name}>
                                     <div className="flex flex-row space-x-2">
-                                        <div>{index}</div>
+                                        <div>{thing.name}</div>
                                         <button onClick={() => {
-                                            editProductName(index);
+                                            editProductName(cnt);
                                         }} hidden={!props.editable}>
                                             <FontAwesomeIcon icon={faPencil} />
                                         </button>
@@ -120,15 +150,15 @@ export default function AvailableStuff({ props }) {
                                         <div hidden={props.editable}>剩餘量：</div>
                                         <button className="bg-pink-300 rounded-lg aspect-square w-6"
                                             onClick={() => {
-                                                toggleAmountChange(index, -1)
+                                                toggleAmountChange(cnt, -1)
                                             }}
                                             hidden={!props.editable}>
                                             <FontAwesomeIcon icon={faMinus} />
                                         </button>
-                                        <div className="bg-neutral-50 px-1">{stuff[index]}</div>
+                                        <div className="bg-neutral-50 px-1">{thing.amount}</div>
                                         <button className="bg-red-300 rounded-lg aspect-square w-6"
                                             onClick={() => {
-                                                toggleAmountChange(index, 1)
+                                                toggleAmountChange(cnt, 1)
                                             }}
                                             hidden={!props.editable}>
                                             <FontAwesomeIcon icon={faPlus} />
@@ -137,7 +167,7 @@ export default function AvailableStuff({ props }) {
                                 </div>
                             ))}
 
-                        <div>
+                        <div hidden={!props.editable}>
                             New Item
                         </div>
                     </div>
@@ -162,7 +192,7 @@ export default function AvailableStuff({ props }) {
 }
 
 import prisma from "../lib/prisma"
-import Link from "next/link"
+
 
 export async function getServerSideProps(context) {
     // TODO: Connect to databases
@@ -205,6 +235,7 @@ export async function getServerSideProps(context) {
             // console.log(user.id)
             const getRooms = await prisma.user.findMany({
                 where: {
+                    token,
                     rooms: {
                         some: {
                             room: {
@@ -214,7 +245,8 @@ export async function getServerSideProps(context) {
                     }
                 }
             })
-            if (getRooms !== null) {
+            console.log(getRooms)
+            if (getRooms.length !== 0) {
                 // verified
                 editable = true
             }
