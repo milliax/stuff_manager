@@ -10,7 +10,7 @@ export default async function query(req, res) {
         //console.log(req.body)
         // TODO: Need Authentication
         const roomNumber = req.query.roomNumber
-        const token = req.query.token
+        // const token = req.query.token
 
         const all_stuff = await prisma.room.findFirst({
             where: { roomNumber }

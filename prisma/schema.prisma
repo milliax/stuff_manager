@@ -2,61 +2,44 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+    provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+    provider = "sqlite"
+    url      = env("DATABASE_URL")
 }
 
-
-model User{
-    // Set Prisma decorators:
-    // - @id (because it's an id)
-    // - @default(autoincrement()) (default value is auto-increment)
-    id Int @id @default(autoincrement())
-    
-    // we use unique token to edit room stuff
-    token String @unique
-
-    // describe about the user
-    username String
-
-    // created time
+model User {
+    id        String   @id @unique @default(uuid())
+    token     String   @unique
+    username  String
     createdAt DateTime @default(now())
-
-    // set a rooms variable
-    // with a Tweet[] type (one to many relationship)
-    rooms RoomsforUsers[]
+    rooms     Room[]
 }
 
-model RoomsforUsers{
-    roomId Int
-    room Room @relation(fields: [roomId],references: [id])
-    userId Int
-    user User @relation(fields: [userId],references: [id])
-    assignedAt DateTime @default(now())
-    assignedBy String
-
-    @@id([roomId,userId])
-}
-
-model Room{
-    id Int @id @default(autoincrement())
+model Room {
+    id         String   @id @unique() @default(uuid())
     roomNumber String
-    title String
-    status String @default("disabled")
-    user RoomsforUsers[]
-    stuff Stuff[]
-    createdAt DateTime @default(now())
+    title      String
+    status     String   @default("disabled")
+    users      User[]
+    stuff      Stuff[]
+    createdAt  DateTime @default(now())
 }
 
-model Stuff{
-    id Int @id @default(autoincrement())
-    name String
-    amount Int @default(1)
+model Stuff {
+    id        String   @id @unique @default(uuid())
+    name      String   @unique
+    amount    Int
+    roomId    String
+    room      Room     @relation(fields: [roomId], references: [id])
     createdAt DateTime @default(now())
-    roomId Int
-    room Room @relation(fields: [roomId],references: [id])
+    updatedAt DateTime @default(now()) @updatedAt()
 }
+
+// enum Status {
+//     DISABLED
+//     PUBLIC
+//     PRIVATE
+// }

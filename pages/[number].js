@@ -1,13 +1,16 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faMinus, faPencil, faPlus } from "@fortawesome/free-solid-svg-icons"
 import { useRouter } from "next/router"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import Swal from "sweetalert2"
 import Link from "next/link"
 
 export default function AvailableStuff({ props }) {
     const [loading, setLoading] = useState(true)
+    const [newItem, setNewItem] = useState(false)
     const [stuff, setStuff] = useState({})
+    const newItemNameRef = useRef()
+    const newItemValueRef = useRef()
     const router = useRouter()
 
     const toggleAmountChange = async (index, delta) => {
@@ -16,39 +19,41 @@ export default function AvailableStuff({ props }) {
         const newNumber = parseInt(stuff[index].amount) + delta
         console.log(newNumber)
         if (newNumber === 0) {
-            Swal.fire({
+            const result = await Swal.fire({
                 title: `${stuff[index].name}吃/用完了嗎 ?`,
                 icon: "question"
-            }).then(result => {
-                if (!result.isConfirmed) {
-                    return;
-                }
             })
-        } else {
-            try {
-                const res = await fetch(`/api/update`, {
-                    method: "POST",
-                    body: JSON.stringify({
-                        mode: "amount",
-                        roomNumber: props.roomNumber,
-                        id: stuff[index].id,
-                        amount: newNumber,
-                        token: props.token,
-                    })
-                })
-            } catch (err) {
-                console.log(`Error: ${err}`)
+            if (!result.isConfirmed) {
+                console.log("don't delete")
+                return;
             }
-            setTimeout(() => (
-                updateStuff()
-            ), 100)
+
         }
+        try {
+            const res = await fetch(`/api/update`, {
+                method: "POST",
+                body: JSON.stringify({
+                    mode: "amount",
+                    roomNumber: props.roomNumber,
+                    id: stuff[index].id,
+                    amount: newNumber,
+                    token: props.token,
+                })
+            })
+        } catch (err) {
+            console.log(`Error: ${err}`)
+        }
+        setTimeout(() => (
+            updateStuff()
+        ), 100)
+
     }
 
     const editProductName = async (index) => {
         const result = await Swal.fire({
             title: "輸入要修改成的名稱",
-            text: `原本名稱：${index}`,
+            input: "text",
+            text: `原本名稱：${stuff[index].name}`,
             inputAttributes: {
                 autocapitalize: "off"
             },
@@ -60,7 +65,8 @@ export default function AvailableStuff({ props }) {
                         mode: "name",
                         roomNumber: props.roomNumber,
                         item: index,
-                        name: newName
+                        name: newName,
+                        id: stuff[index].id
                     })
                 }).then(response => {
                     if (!response.ok) {
@@ -68,11 +74,9 @@ export default function AvailableStuff({ props }) {
                     }
                     return response.json()
                 }).then(() => {
-                    setTimeout(() => {
-                        updateStuff()
-                    }, 100)
+                    updateStuff()
                 }).catch(error => {
-                    Swal.showValidatationMessage(`Request failed: ${error}`)
+                    Swal.showValidationMessage(`Request failed: ${error}`)
                 })
             },
             allowOutsideClick: () => !Swal.isLoading()
@@ -80,7 +84,7 @@ export default function AvailableStuff({ props }) {
 
         if (result.isConfirmed) {
             return Swal.fire({
-                title: `刪除${index}成功`,
+                title: `更新成功`,
                 icon: "success"
             })
         }
@@ -101,6 +105,36 @@ export default function AvailableStuff({ props }) {
         setLoading(false)
     }
 
+    const createNewItem = async () => {
+        const name = newItemNameRef.current.value
+        const value = newItemValueRef.current.value
+
+        try {
+            const res = await fetch(`/api/create`, {
+                method: "POST",
+                body: JSON.stringify({
+                    token: props.token,
+                    roomId: props.roomId,
+                    name,
+                    value
+                })
+            })
+            const json = await res.json();
+            if (!res.ok) {
+                await Swal.fire({
+                    title: json.error,
+                    icon: "error"
+                })
+            }
+        } catch (err) {
+            console.log(`Error: ${err}`)
+        }
+        setNewItem(false)
+        newItemNameRef.current.value = "";
+        newItemValueRef.current.value = 0;
+        updateStuff();
+    }
+
     useEffect(() => {
         if (!props.editable && props.status === "private") {
             Swal.fire({
@@ -110,7 +144,6 @@ export default function AvailableStuff({ props }) {
                 router.push("/")
             })
         } else {
-            //TODO: fetch the latest stuff list
             updateStuff()
         }
     }, [])
@@ -167,9 +200,34 @@ export default function AvailableStuff({ props }) {
                                 </div>
                             ))}
 
-                        <div hidden={!props.editable}>
+                        <div hidden={!props.editable}
+                            className="bg-red-100 w-24 text-center py-1 rounded-full cursor-pointer hover:bg-red-200 hover:shadow-md"
+                            onClick={() => {
+                                setNewItem(!newItem)
+                            }}>
                             New Item
                         </div>
+                        <form className={`bg-red-100 px-5 py-2 rounded-xl ${newItem ? "flex flex-col" : "hidden"} space-y-3`}
+                            onSubmit={event => {
+                                event.preventDefault();
+                                createNewItem();
+                            }}>
+                            <div className="flex flex-row w-full justify-between">
+                                <div className="w-2/5 flex flex-row">
+                                    <div className="w-20">品名</div>
+                                    <input ref={newItemNameRef}
+                                        className="w-full rounded-lg px-2" />
+                                </div>
+                                <div className="w-1/5 flex flex-row">
+                                    <div className="w-20">數量</div>
+                                    <input ref={newItemValueRef}
+                                        className="w-full rounded-lg px-2"
+                                        type="number"
+                                    />
+                                </div>
+                            </div>
+                            <button className="self-end bg-blue-100 px-2 py-0.5 rounded-full hover:shadow-lg hover:bg-blue-200">新增</button>
+                        </form>
                     </div>
 
                 </div>
@@ -195,13 +253,7 @@ import prisma from "../lib/prisma"
 
 
 export async function getServerSideProps(context) {
-    // TODO: Connect to databases
-    /* TODO: Add authentication
-        1. add a permanent token that can change single room
-        2. add account system
-     */
     // TODO: No websocket support yet
-    // TODO: generate a token and send it to frontend to retrieve the item data?
     const roomNumber = context.params.number
     const token = context.query.token
 
@@ -220,6 +272,7 @@ export async function getServerSideProps(context) {
         }
     }
     // console.log(result.stuff)
+    let roomId = undefined
     let username = undefined
     let editable = undefined
 
@@ -235,20 +288,26 @@ export async function getServerSideProps(context) {
             // console.log(user.id)
             const getRooms = await prisma.user.findMany({
                 where: {
-                    token,
-                    rooms: {
-                        some: {
-                            room: {
-                                roomNumber
+                    AND: [
+                        { token },
+                        {
+                            rooms: {
+                                some: {
+                                    roomNumber
+                                }
                             }
                         }
-                    }
+                    ]
+                },
+                include: {
+                    rooms: []
                 }
             })
             console.log(getRooms)
             if (getRooms.length !== 0) {
                 // verified
                 editable = true
+                roomId = result.id
             }
             // console.log(getRooms)
         }
@@ -268,6 +327,7 @@ export async function getServerSideProps(context) {
                 exist: true,
                 username: username === undefined ? null : username,
                 editable: editable === undefined ? null : editable,
+                roomId: roomId === undefined ? null : roomId,
             }
         },
     }
